@@ -34,7 +34,7 @@ class _WoodenFishScreenState extends State<WoodenFishScreen> {
 
   void _incrementCounter() {
     setState(() {
-      _counter++;
+      _counter += 2;  // Changed from ++ to += 2 for testing CICD
       _showFlash = true;
     });
 
