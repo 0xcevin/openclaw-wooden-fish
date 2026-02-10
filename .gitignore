@@ -1,0 +1,31 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.ios/
+android/.gradle
+android/.idea
+android/app/google-services.json
+android/app/src/main/res/drawable-v21/launch_background.xml
+android/app/src/main/res/values-night/styles.xml
+android/app/src/main/res/values/styles.xml
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/settings.gradle
+build/
+ios/
+lib/generated_plugin_registrant.dart
+linux/
+macos/
+test/**
+windows/
+
+# Exceptions to the above
+!.gitignore
+
+# Miscellaneous
+.project
+*.log
+*.tmp
+.DS_Store
