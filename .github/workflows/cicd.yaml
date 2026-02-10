@@ -1,8 +1,10 @@
-name: Build APK
+name: Build and Release APK
 
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main ]
 
@@ -13,35 +15,74 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # 设置 Java 环境 (Flutter 依赖)
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
 
-    # 设置 Flutter
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.0' # 选择一个稳定版本
+        flutter-version: '3.24.0'
         cache: true
 
-    # 【核心】如果本地没有 android/ ios/ 目录，则在 CI 中创建它们
-    - name: Create Flutter project structure
-      run: flutter create . --project-name wooden_fish
+    - name: Extract project name
+      id: project
+      run: |
+        PROJECT_NAME=$(grep "^name:" pubspec.yaml | sed 's/name: //' | tr -d ' ')
+        echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_OUTPUT
+        echo "Using project name: $PROJECT_NAME"
 
-    # 获取依赖
+    - name: Create Flutter project structure
+      run: flutter create . --project-name ${{ steps.project.outputs.PROJECT_NAME }}
+
     - name: Get dependencies
       run: flutter pub get
 
-    # 构建 APK
-    - name: Build APK
-      run: flutter build apk --debug # --release 用于正式版，--debug 更快，适合测试
+    - name: Build Debug APK
+      if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/v')
+      run: flutter build apk --debug
 
-    # 上传生成的 APK 作为构件
-    - name: Upload APK
+    - name: Build Release APK
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      run: flutter build apk --release
+
+    - name: Upload Debug APK
+      if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/v')
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
-        path: build/app/outputs/flutter-apk/app-debug.apk # 路径根据实际构建产物调整
+        path: build/app/outputs/flutter-apk/app-debug.apk
+
+    - name: Upload Release APK
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download Release APK
+      uses: actions/download-artifact@v4
+      with:
+        name: release-apk
+        path: ./apk
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./apk/app-release.apk
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
