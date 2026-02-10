@@ -1,0 +1,47 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # 设置 Java 环境 (Flutter 依赖)
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    # 设置 Flutter
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0' # 选择一个稳定版本
+        cache: true
+
+    # 【核心】如果本地没有 android/ ios/ 目录，则在 CI 中创建它们
+    - name: Create Flutter project structure
+      run: flutter create .
+
+    # 获取依赖
+    - name: Get dependencies
+      run: flutter pub get
+
+    # 构建 APK
+    - name: Build APK
+      run: flutter build apk --debug # --release 用于正式版，--debug 更快，适合测试
+
+    # 上传生成的 APK 作为构件
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-apk
+        path: build/app/outputs/flutter-apk/app-debug.apk # 路径根据实际构建产物调整
